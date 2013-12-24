@@ -49,6 +49,12 @@ var Packet = module.exports = function() {
   this.answer = undefined;
   this.authority = undefined;
   this.additional = undefined;
+
+  this.question = [];
+  this.answer = [];
+  this.authority = [];
+  this.additional = [];
+
   this.edns_options = [];
   this.payload = undefined;
 };
@@ -589,6 +595,42 @@ function parseNaptr(val, rdata) {
   return PARSE_RESOURCE_DONE;
 }
 
+function parseCert(val, msg, rdata) {
+  val.cert_type = msg.readUInt16BE();
+  val.key_tag = msg.readUInt16BE();
+  val.algo = msg.readUInt8();
+  val.cert = "";
+
+  //var end =  + rdata.len-msg.tell()-5;
+  //console.log("msg.tell(): "+msg.tell());
+  //console.log("end: "+end);
+  //console.log("rdata.len: "+rdata.len);
+  //while (msg.tell() != end) {
+  //  console.log(msg.tell());
+  //  val.cert += msg.toString('ascii', msg.readUInt8());
+  //  //console.log(val.cert);
+  //}  
+
+  val.cert=msg.toString('binary');
+
+  console.log(val.cert.length);
+
+  //val.cert=[]
+
+  //skipping first 5 bytes in rdata (type 2bytes, key_tag 2bytes, algorithm 1byte)
+  //writing certificate into cert from rest of the buffer
+  //for (var i = 5; i < rdata.length; i += 1) {
+  //    //val.cert.push(rdata['readUInt8'](i));
+  //    val.cert.push();
+  //    console.log(msg.readUInt8());
+  //}       
+
+  //console.log(val.cert); 
+
+  return PARSE_RESOURCE_DONE;
+}
+
+
 var
   PARSE_HEADER          = 100000,
   PARSE_QUESTION        = 100001,
@@ -607,7 +649,9 @@ var
   PARSE_SRV   = consts.NAME_TO_QTYPE.SRV,
   PARSE_NAPTR = consts.NAME_TO_QTYPE.NAPTR,
   PARSE_OPT   = consts.NAME_TO_QTYPE.OPT,
-  PARSE_SPF   = consts.NAME_TO_QTYPE.SPF;
+  PARSE_SPF   = consts.NAME_TO_QTYPE.SPF,
+
+  PARSE_CERT  = consts.NAME_TO_QTYPE.CERT;
   
 
 Packet.parse = function(msg) {
@@ -682,6 +726,9 @@ Packet.parse = function(msg) {
         break;
       case PARSE_MX:
         state = parseMx(val, msg);
+        break;
+      case PARSE_CERT:
+        state = parseCert(val, msg, rdata);
         break;
       case PARSE_SRV:
         state = parseSrv(val, msg);
